@@ -9,6 +9,12 @@ services:
     language: js
     host: containerapp
   api:
-    project: ./src/api
-    language: js
     host: containerapp
+    containers: 
+      main: 
+        project: ./src/api
+        language: js
+      sidecar:
+        project: ./src/sidecar
+        language: js
+
