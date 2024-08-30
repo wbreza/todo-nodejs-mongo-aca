@@ -64,8 +64,12 @@ module containerApps './core/host/container-apps.bicep' = {
     name: 'app'
     location: location
     tags: tags
-    containerAppsEnvironmentName: !empty(containerAppsEnvironmentName) ? containerAppsEnvironmentName : '${abbrs.appManagedEnvironments}${resourceToken}'
-    containerRegistryName: !empty(containerRegistryName) ? containerRegistryName : '${abbrs.containerRegistryRegistries}${resourceToken}'
+    containerAppsEnvironmentName: !empty(containerAppsEnvironmentName)
+      ? containerAppsEnvironmentName
+      : '${abbrs.appManagedEnvironments}${resourceToken}'
+    containerRegistryName: !empty(containerRegistryName)
+      ? containerRegistryName
+      : '${abbrs.containerRegistryRegistries}${resourceToken}'
     // Work around Azure/azure-dev#3157 (the root cause of which is Azure/acr#723) by explicitly enabling the admin user to allow users which
     // don't have the `Owner` role granted (and instead are classic administrators) to access the registry to push even if AAD authentication fails.
     //
@@ -145,9 +149,15 @@ module monitoring './core/monitor/monitoring.bicep' = {
   params: {
     location: location
     tags: tags
-    logAnalyticsName: !empty(logAnalyticsName) ? logAnalyticsName : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
-    applicationInsightsName: !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
-    applicationInsightsDashboardName: !empty(applicationInsightsDashboardName) ? applicationInsightsDashboardName : '${abbrs.portalDashboards}${resourceToken}'
+    logAnalyticsName: !empty(logAnalyticsName)
+      ? logAnalyticsName
+      : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+    applicationInsightsName: !empty(applicationInsightsName)
+      ? applicationInsightsName
+      : '${abbrs.insightsComponents}${resourceToken}'
+    applicationInsightsDashboardName: !empty(applicationInsightsDashboardName)
+      ? applicationInsightsDashboardName
+      : '${abbrs.portalDashboards}${resourceToken}'
   }
 }
 
@@ -179,6 +189,25 @@ module apimApi './app/apim-api.bicep' = if (useAPIM) {
   }
 }
 
+module serviceBusNamespace './core/messaging/servicebus-namespace.bicep' = {
+  name: 'servicebus-namespace'
+  scope: rg
+  params: {
+    name: '${abbrs.serviceBusNamespaces}msg-${resourceToken}'
+    location: location
+    tags: tags
+  }
+}
+
+module serviceBusQueue './core/messaging/servicebus-queue.bicep' = {
+  name: 'servicebus-queue'
+  scope: rg
+  params: {
+    name: 'myQueue'
+    serviceBusNamespace: serviceBusNamespace.outputs.serviceBusNamespace
+  }
+}
+
 // Data outputs
 output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmos.outputs.connectionStringKey
 output AZURE_COSMOS_DATABASE_NAME string = cosmos.outputs.databaseName
@@ -199,4 +228,4 @@ output REACT_APP_WEB_BASE_URL string = web.outputs.SERVICE_WEB_URI
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output SERVICE_WEB_NAME string = web.outputs.SERVICE_WEB_NAME
 output USE_APIM bool = useAPIM
-output SERVICE_API_ENDPOINTS array = useAPIM ? [ apimApi.outputs.SERVICE_API_URI, api.outputs.SERVICE_API_URI ]: []
+output SERVICE_API_ENDPOINTS array = useAPIM ? [apimApi.outputs.SERVICE_API_URI, api.outputs.SERVICE_API_URI] : []
