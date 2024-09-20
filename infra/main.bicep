@@ -9,10 +9,6 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-// Optional parameters to override the default azd resource naming conventions. Update the main.parameters.json file to provide values. e.g.,:
-// "resourceGroupName": {
-//      "value": "myGroupName"
-// }
 param apiContainerAppName string = ''
 param applicationInsightsDashboardName string = ''
 param applicationInsightsName string = ''
@@ -25,8 +21,6 @@ param logAnalyticsName string = ''
 param resourceGroupName string = ''
 param webContainerAppName string = ''
 param apimServiceName string = ''
-param apiAppExists bool = false
-param webAppExists bool = false
 
 @description('Flag to use Azure API Management to mediate the calls between the Web frontend and the backend API')
 param useAPIM bool = false
@@ -42,6 +36,12 @@ param principalId string = ''
 
 @description('The base URL used by the web service for sending API requests')
 param webApiBaseUrl string = ''
+
+@description('The image name for the API container app')
+param apiImageName string = ''
+
+@description('The image name for the web container app')
+param webImageName string = ''
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
@@ -66,13 +66,6 @@ module containerApps './core/host/container-apps.bicep' = {
     tags: tags
     containerAppsEnvironmentName: !empty(containerAppsEnvironmentName) ? containerAppsEnvironmentName : '${abbrs.appManagedEnvironments}${resourceToken}'
     containerRegistryName: !empty(containerRegistryName) ? containerRegistryName : '${abbrs.containerRegistryRegistries}${resourceToken}'
-    // Work around Azure/azure-dev#3157 (the root cause of which is Azure/acr#723) by explicitly enabling the admin user to allow users which
-    // don't have the `Owner` role granted (and instead are classic administrators) to access the registry to push even if AAD authentication fails.
-    //
-    // This addresses the following error during deploy:
-    //
-    // failed getting ACR token: POST https://<some-random-name>.azurecr.io/oauth2/exchange 401 Unauthorized
-    containerRegistryAdminUserEnabled: true
     logAnalyticsWorkspaceName: monitoring.outputs.logAnalyticsWorkspaceName
     applicationInsightsName: monitoring.outputs.applicationInsightsName
   }
@@ -90,7 +83,7 @@ module web './app/web.bicep' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     containerRegistryHostSuffix: containerRegistryHostSuffix
-    exists: webAppExists
+    imageName: webImageName
   }
 }
 
@@ -109,7 +102,7 @@ module api './app/api.bicep' = {
     containerRegistryHostSuffix: containerRegistryHostSuffix
     keyVaultName: keyVault.outputs.name
     corsAcaUrl: corsAcaUrl
-    exists: apiAppExists
+    imageName: apiImageName
   }
 }
 

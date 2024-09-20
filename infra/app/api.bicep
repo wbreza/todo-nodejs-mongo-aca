@@ -10,7 +10,7 @@ param containerRegistryHostSuffix string
 param keyVaultName string
 param serviceName string = 'api'
 param corsAcaUrl string
-param exists bool
+param imageName string = ''
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -26,7 +26,7 @@ module apiKeyVaultAccess '../core/security/keyvault-access.bicep' = {
   }
 }
 
-module app '../core/host/container-app-upsert.bicep' = {
+module app '../core/host/container-app.bicep' = {
   name: '${serviceName}-container-app'
   dependsOn: [ apiKeyVaultAccess ]
   params: {
@@ -35,7 +35,6 @@ module app '../core/host/container-app-upsert.bicep' = {
     tags: union(tags, { 'azd-service-name': serviceName })
     identityType: 'UserAssigned'
     identityName: apiIdentity.name
-    exists: exists
     containerAppsEnvironmentName: containerAppsEnvironmentName
     containerRegistryName: containerRegistryName
     containerRegistryHostSuffix: containerRegistryHostSuffix
@@ -60,6 +59,7 @@ module app '../core/host/container-app-upsert.bicep' = {
       }
     ]
     targetPort: 3100
+    imageName: imageName
   }
 }
 

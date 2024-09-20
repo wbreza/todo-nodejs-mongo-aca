@@ -7,14 +7,14 @@ param containerAppsEnvironmentName string
 param containerRegistryHostSuffix string
 param containerRegistryName string
 param serviceName string = 'web'
-param exists bool
+param imageName string = ''
 
 resource webIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
   location: location
 }
 
-module app '../core/host/container-app-upsert.bicep' = {
+module app '../core/host/container-app.bicep' = {
   name: '${serviceName}-container-app'
   params: {
     name: name
@@ -22,11 +22,11 @@ module app '../core/host/container-app-upsert.bicep' = {
     tags: union(tags, { 'azd-service-name': serviceName })
     identityType: 'UserAssigned'
     identityName: identityName
-    exists: exists
     containerAppsEnvironmentName: containerAppsEnvironmentName
     containerRegistryName: containerRegistryName
     containerRegistryHostSuffix: containerRegistryHostSuffix
     targetPort: 80
+    imageName: imageName
   }
 }
 
