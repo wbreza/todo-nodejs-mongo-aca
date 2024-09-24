@@ -1,24 +1,31 @@
-param name string
+@maxLength(64)
+@description('Name of the the environment which is used to generate a short unique hash used in all resources.')
+param environmentName string
+
+var abbrs = loadJsonContent('../../../infra/abbreviations.json')
+var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+
+param name string = ''
 param location string = resourceGroup().location
 param tags object = {}
 
-param identityName string
 param applicationInsightsName string
 param containerAppsEnvironmentName string
 param containerRegistryName string
-param containerRegistryHostSuffix string
+@description('Hostname suffix for container registry. Set when deploying to sovereign clouds')
+param containerRegistryHostSuffix string = 'azurecr.io'
 param keyVaultName string
 param serviceName string = 'api'
 param corsAcaUrl string
 param imageName string = ''
 
 resource apiIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: identityName
+  name: '${abbrs.managedIdentityUserAssignedIdentities}${serviceName}-${resourceToken}'
   location: location
 }
 
 // Give the API access to KeyVault
-module apiKeyVaultAccess '../core/security/keyvault-access.bicep' = {
+module apiKeyVaultAccess '../../../infra/core/security/keyvault-access.bicep' = {
   name: 'api-keyvault-access'
   params: {
     keyVaultName: keyVaultName
@@ -26,11 +33,11 @@ module apiKeyVaultAccess '../core/security/keyvault-access.bicep' = {
   }
 }
 
-module app '../core/host/container-app.bicep' = {
+module app '../../../infra/core/host/container-app.bicep' = {
   name: '${serviceName}-container-app'
   dependsOn: [ apiKeyVaultAccess ]
   params: {
-    name: name
+    name: !empty(name) ? name : '${abbrs.appContainerApps}${serviceName}-${resourceToken}'
     location: location
     tags: union(tags, { 'azd-service-name': serviceName })
     identityType: 'UserAssigned'

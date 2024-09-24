@@ -1,27 +1,34 @@
-param name string
+@maxLength(64)
+@description('Name of the the environment which is used to generate a short unique hash used in all resources.')
+param environmentName string
+
+var abbrs = loadJsonContent('../../../infra/abbreviations.json')
+var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+
+param name string = ''
 param location string = resourceGroup().location
 param tags object = {}
 
-param identityName string
 param containerAppsEnvironmentName string
-param containerRegistryHostSuffix string
+@description('Hostname suffix for container registry. Set when deploying to sovereign clouds')
+param containerRegistryHostSuffix string = 'azurecr.io'
 param containerRegistryName string
 param serviceName string = 'web'
 param imageName string = ''
 
 resource webIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: identityName
+  name: '${abbrs.managedIdentityUserAssignedIdentities}${serviceName}-${resourceToken}'
   location: location
 }
 
-module app '../core/host/container-app.bicep' = {
+module app '../../../infra/core/host/container-app.bicep' = {
   name: '${serviceName}-container-app'
   params: {
-    name: name
+    name: !empty(name) ? name : '${abbrs.appContainerApps}${serviceName}-${resourceToken}'
     location: location
     tags: union(tags, { 'azd-service-name': serviceName })
     identityType: 'UserAssigned'
-    identityName: identityName
+    identityName: webIdentity.name
     containerAppsEnvironmentName: containerAppsEnvironmentName
     containerRegistryName: containerRegistryName
     containerRegistryHostSuffix: containerRegistryHostSuffix
